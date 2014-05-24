@@ -1,0 +1,3 @@
+name: Transporters
+main: com.cyclometh.bukkit.plugins.transporters.Transporters
+version: 0.1
