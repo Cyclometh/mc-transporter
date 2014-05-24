@@ -1,6 +1,0 @@
-[submodule "libsrc/ParticleEffect"]
-	path = libsrc/ParticleEffect
-	url = https://gist.github.com/5868517.git
-[submodule "libsrc/ReflectionHandler"]
-	path = libsrc/ReflectionHandler
-	url = https://gist.github.com/8832875.git
