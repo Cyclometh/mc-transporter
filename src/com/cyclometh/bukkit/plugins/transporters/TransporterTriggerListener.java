@@ -5,13 +5,14 @@ import java.sql.SQLException;
 
 import lib.PatPeter.SQLibrary.Database;
 
-import org.bukkit.Effect;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Sound;
-import org.bukkit.World;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.vehicle.VehicleMoveEvent;
 
 /*
  * Class: TransporterTriggerListener
@@ -36,38 +37,89 @@ public class TransporterTriggerListener implements Listener {
 
 	@EventHandler
 	public void onPlayerMove(PlayerMoveEvent event) {
-		Location to=null;
-		World world=null;
-		
-		Location loc=event.getTo();
+		Location target=null;
+		Location to=event.getTo();
 		Location from=event.getFrom();
 		
-		int x, y, z;
-		x=loc.getBlockX();
-		y=loc.getBlockY();
-		z=loc.getBlockZ();
-		
-		if(Math.abs(from.getBlockX()-x) < 1 && Math.abs(from.getBlockY() - y) < 1 && Math.abs(from.getBlockZ()-z) < 1) {
-			return; 	//player didn't move far enough.
+		if(!didMove(from, to))
+		{
+			return;
 		}
 		
 		//well, looks like they're set to go, so let's teleport them if they're standing on a teleporter.
-		world=loc.getWorld();
-		if ((to=getTargetLocation(x,y,z, loc, world, event.getPlayer().getUniqueId().toString()))!=null) {
+		target=getTargetLocation(to, event.getPlayer().getUniqueId().toString());
+		
+		if (target!=null) {
 			if(plugin.isDebug()) {
-				plugin.getLogger().info(String.format("Preparing to teleport player %s at %s, %s, %s.", event.getPlayer().getName(), x, y, z));
+				plugin.getLogger().info(String.format("Preparing to teleport player %s at %s, %s, %s.", event.getPlayer().getName(), 
+						from.getBlockX(), from.getBlockY(), from.getBlockZ()));
 			}
-			world.playEffect(loc, Effect.SMOKE, 0);
-			world.playSound(loc, Sound.ENDERMAN_TELEPORT, 1, 0);
-			event.getPlayer().teleport(to);
-			world.playEffect(to, Effect.SMOKE, 0);
-			
-			linkManager.recordTransport(x, y, z, event.getPlayer().getUniqueId().toString());
+			Bukkit.getScheduler().runTask(this.plugin, new TeleportTask(event.getPlayer(), target, this.plugin));
+			linkManager.recordTransport(from.getBlockX(), from.getBlockY(), from.getBlockZ(), event.getPlayer().getUniqueId().toString());
 		}
 			
 	}
 	
-	private Location getTargetLocation(int x, int y, int z, Location currentLocation, World world, String playerUUID) {
+	@EventHandler
+	public void onVehicleMove(VehicleMoveEvent event) {
+		Location target=null;
+		Location to=event.getTo();
+		Location from=event.getFrom();
+		
+		if(event.getVehicle().getType() != EntityType.MINECART) {
+			return;
+		}
+		
+		if (event.getVehicle().getPassenger()==null 
+				|| event.getVehicle().getPassenger().getType() != EntityType.PLAYER) {
+			//no one in it, no teleport.
+			//maybe add ability to teleport minecarts by themselves, but that means changing
+			//the link lookup code for hubs and meh.
+			return;
+		}
+		
+		//plugin.getLogger().info(String.format("From: %s To: %s", from.toString(), to.toString()));
+		
+		if(!didMove(from, to))
+		{
+			return;
+		}
+		
+		
+		Player player=(Player)event.getVehicle().getPassenger();
+		target=getTargetLocation(to, event.getVehicle().getPassenger().getUniqueId().toString());
+		if (target!=null) {
+			if(plugin.isDebug()) {
+				plugin.getLogger().info(String.format("Preparing to teleport player %s at %s, %s, %s.", player.getName(), 
+						from.getBlockX(), from.getBlockY(), from.getBlockZ()));
+			}
+			Bukkit.getScheduler().runTask(this.plugin, new TeleportTask((Player)event.getVehicle().getPassenger(), target, this.plugin));
+			linkManager.recordTransport(from.getBlockX(), from.getBlockY(), from.getBlockZ(), player.getUniqueId().toString());
+		}
+	}
+	
+	private boolean didMove(Location from, Location to) {
+		int fromX, fromY, fromZ;
+		fromX=from.getBlockX();
+		fromY=from.getBlockY();
+		fromZ=from.getBlockZ();
+		
+		int toX, toY, toZ;
+		toX=to.getBlockX();
+		toY=to.getBlockY();
+		toZ=to.getBlockZ();
+		
+		if(Math.abs(fromX - toX) < 1 && Math.abs(fromY - toY) < 1 && Math.abs(fromZ - toZ) < 1) {
+			return false;	//player didn't move far enough.
+		}
+		return true;
+	}
+	
+	
+	private Location getTargetLocation(Location currentLocation, String playerUUID) {
+		int x=currentLocation.getBlockX();
+		int y=currentLocation.getBlockY();
+		int z=currentLocation.getBlockZ();
 		try {
 			String query=String.format("SELECT t1.X, t1.Y, t1.Z, lt.PlayerUUID FROM TransporterLinks t1 "
 					+ "JOIN TransporterLinks t2 ON t1.KeyValue = t2.KeyValue "
@@ -82,7 +134,7 @@ public class TransporterTriggerListener implements Listener {
 			results=sql.query(query);
 			if(results.next())
 			{
-				return new Location(world,
+				return new Location(currentLocation.getWorld(),
 						results.getInt(1)+0.5,		//center of the target block.
 						results.getInt(2)+1,		//don't want to put them IN the target block.
 						results.getInt(3)+0.5,		//center of the target block.

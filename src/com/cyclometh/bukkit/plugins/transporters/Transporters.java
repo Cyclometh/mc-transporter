@@ -101,7 +101,7 @@ public class Transporters extends JavaPlugin {
 					+ "KeyValue INT, PlayerUUID TEXT, ParentLinkID INT NULL);");
 			sql.query("CREATE UNIQUE INDEX locIdx ON TransporterLinks(X, Y, Z);");
 			sql.query("CREATE INDEX keyIdx ON TransporterLinks(KeyValue);");
-			sql.query("CREATE TABLE LastTransported(ID INTEGER PRIMARY KEY ASC, PlayerUUID TEXT, TransporterID INT;");
+			sql.query("CREATE TABLE LastTransported(ID INTEGER PRIMARY KEY ASC, PlayerUUID TEXT, TransporterID INT);");
 			
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block

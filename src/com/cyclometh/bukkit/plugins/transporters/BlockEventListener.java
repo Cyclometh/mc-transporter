@@ -27,9 +27,9 @@ public class BlockEventListener implements Listener {
 	@EventHandler
 	public void onBlockPlace(BlockPlaceEvent event) {
 		Block placedBlock=event.getBlock();
-		Block placedBelow=placedBlock.getRelative(BlockFace.DOWN);
+
 		if(placedBlock.getType()==Material.QUARTZ_BLOCK) {
-			plugin.getLogger().info("Quartz block placed.");
+			Block placedBelow=placedBlock.getRelative(BlockFace.DOWN);
 			if(placedBelow.getType()==Material.CHEST)
 			{
 				int inventoryKey=0;

@@ -1,1 +1,5 @@
 #BukkitTransporter config file.
+
+#Output debug messages?
+debug: true
+
